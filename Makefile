@@ -1,4 +1,4 @@
-.PHONY: clean data lint requirements sync_data_to_s3 sync_data_from_s3
+.PHONY: clean data lint requirements sync_data_to_s3 sync_data_from_s3 train_models predict_and_compare evaluate_models
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -19,6 +19,17 @@ endif
 #################################################################################
 # COMMANDS                                                                      #
 #################################################################################
+
+## new
+train_models:
+    python src/models/train_models.py
+
+predict_and_compare:
+    python src/models/predict_and_compare.py
+
+evaluate_models:
+    python src/models/evaluate_models.py
+
 
 ## Install Python Dependencies
 requirements: test_environment
