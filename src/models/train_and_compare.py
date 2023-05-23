@@ -1,9 +1,6 @@
 import time
 import pandas as pd
-from tensorflow.keras.models import load_model
-
 from baseline import create_model as create_baseline_model, compile_model as compile_baseline_model
-# importy dla innych modeli
 
 from src.data.load_dataset import load_data
 
@@ -30,21 +27,18 @@ if __name__ == '__main__':
 
     baseline_model = create_baseline_model()
     compile_baseline_model(baseline_model)
-    # Utwórz i skompiluj inne modele tutaj
 
     models = [baseline_model, ...]  # lista modeli
     model_names = ['baseline', ...]  # lista nazw modeli
 
     histories, training_times = train_and_compare(models, model_names, train_dataset, val_dataset, epochs=10)
 
-    # Zapisz czasy treningu do pliku CSV
     training_times_df = pd.DataFrame({
         'model': model_names,
         'training_time': training_times
     })
     training_times_df.to_csv('training_times.csv', index=False)
 
-    # Zapisz historie treningu (loss i accuracy) do pliku CSV
     for history, model_name in zip(histories, model_names):
         history_df = pd.DataFrame(history.history)
         history_df.to_csv(f'{model_name}_history.csv', index=False)

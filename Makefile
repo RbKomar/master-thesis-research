@@ -1,4 +1,4 @@
-.PHONY: clean data lint requirements sync_data_to_s3 sync_data_from_s3 train_models predict_and_compare evaluate_models
+.PHONY: clean data lint requirements sync_data_to_s3 sync_data_from_s3 train_models predict_and_compare evaluate_models prepare_data
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -29,6 +29,9 @@ predict_and_compare:
 
 evaluate_models:
     python src/models/evaluate_models.py
+
+prepare_data:
+    python src/data/make_dataset.py
 
 
 ## Install Python Dependencies
