@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
@@ -6,7 +5,6 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
-from src.models.model_builder import ModelBuilder
 
 def evaluate_model(model, test_data, test_labels):
     predictions = model.predict(test_data)

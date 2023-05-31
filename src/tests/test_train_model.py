@@ -1,7 +1,7 @@
 import unittest
 import os
 from src.models.train_model import train_and_save_model
-from src.models.model_builder import ModelBuilder
+from _old.model_builder import ModelBuilder
 
 class TestTrainModel(unittest.TestCase):
     def test_train_and_save_model(self):

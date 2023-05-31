@@ -20,7 +20,7 @@ endif
 # COMMANDS                                                                      #
 #################################################################################
 
-## new
+## Commands
 train_models:
     python src/models/train_models.py
 

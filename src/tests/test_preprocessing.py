@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 import unittest
 
-from src.data.preprocessing import preprocess_image
+from _old.preprocessing import preprocess_image
 
 
 class TestPreprocessing(unittest.TestCase):

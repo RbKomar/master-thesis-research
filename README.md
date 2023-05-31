@@ -1,7 +1,37 @@
-master_thesis
+
+Skin Lesion Analysis
 ==============================
 
-A short description of the project.
+Skin Lesion Analysis is a project to compare different architectures of machine learning models, such as Baseline, VGG16 and ResNet, to classify skin lesions. The project is structured according to the `Cookiecutter Data Science Project Template` structure.
+
+## Installation
+
+1 Clone this repository to your local computer.
+
+2. make sure you have Python 3.8 or later installed. We recommend using a Python environment manager such as `conda` or `venv` to create an isolated environment for this project.
+
+3. install the required dependencies using the `pip install -r requirements.txt` command.
+
+## Usage
+
+1. parse and split the data using the `src/data/make_dataset.py` script.
+
+2. Train all models using the script `src/models/train_models.py`.
+
+3. generate predictions for all models using the `src/models/predict_models.py` script.
+
+4. Evaluate all models using the `src/models/evaluate_models.py` script.
+
+To run all these steps at once, you can use the `run_all.sh` script (using the `bash run_all.sh` command in terminal).
+
+## Tests
+
+To run unit tests for different scripts, use the `pytest` command in the project's root directory. Make sure you install `pytest` as part of the project dependencies.
+
+## License
+
+This project is released under the MIT license. See the [LICENSE](LICENSE) file for details.
+
 
 Project Organization
 ------------

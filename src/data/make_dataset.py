@@ -1,130 +1,162 @@
-# -*- coding: utf-8 -*-
 import os
-import logging
-import numpy as np
 import tensorflow as tf
+import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
-
-from src.data.load_dataset import load_ham10000, load_isic2016, load_isic2017, load_isic2019, load_isic2020
-from src.data.preprocessing import preprocess_image
-
-logger = logging.getLogger("master-thesis")
-
-import hashlib
-
-
-
-
-def hash_image(image):
-    hasher = hashlib.sha256()
-    hasher.update(image.tobytes())
-    return hasher.digest()
-
-
-def make_dataset(data_dir, image_size, batch_size, shuffle_buffer_size):
-    datasets = []
-    all_hashes = set() # set of all image hashes
-    dataset_info = [
-        {"name": "HAM10000", "load_func": load_ham10000, "preprocess_func": preprocess_image},
-        {"name": "ISIC2016", "load_func": load_isic2016, "preprocess_func": preprocess_image},
-        {"name": "ISIC2017", "load_func": load_isic2017, "preprocess_func": preprocess_image},
-        {"name": "ISIC2019", "load_func": load_isic2019, "preprocess_func": preprocess_image},
-        {"name": "ISIC2020", "load_func": load_isic2020, "preprocess_func": preprocess_image}
-    ]
-    for info in dataset_info:
-        # load the dataset
-        data = info["load_func"](data_dir)
-        # remove duplicates
-        data = data.filter(lambda image: hash_image(image) not in all_hashes)
-        # add new hashes to set
-        all_hashes.update(set(data.map(lambda image: hash_image(image))))
-        # preprocess the images
-        data = data.map(lambda image, label: (info["preprocess_func"](image, image_size), label))
-        # cache the dataset
-        data = data.cache()
-        data = data.shuffle(buffer_size=shuffle_buffer_size)
-        data = data.batch(batch_size)
-        datasets.append(data)
-        print(f"{info['name']} dataset loaded with {len(data)} images.")
-    return tf.data.experimental.sample_from_datasets(datasets)
-
-
-def split_data(data, labels, test_size=0.2, val_size=0.2, random_state=42):
-    x_train, x_temp, y_train, y_temp = train_test_split(data, labels, test_size=test_size + val_size, random_state=random_state)
-    # second split to separate out the validation and test sets
-    x_val, x_test, y_val, y_test = train_test_split(x_temp, y_temp, test_size=0.5, random_state=random_state)
-
-    return x_train, y_train, x_val, y_val, x_test, y_test
-
-
-def save_data(data, filename):
-    data.to_csv(filename, index=False)
-
-def cache_dataset(dataset, cache_dir):
-    os.makedirs(cache_dir, exist_ok=True)
-    for i, image in enumerate(dataset):
-        cache_path = os.path.join(cache_dir, f'image_{i}.npy')
-        np.save(cache_path, image.numpy())
-    return tf.data.Dataset.list_files(os.path.join(cache_dir, '*.npy'))
+import pydicom
 
 
 
 
 
-if __name__ == '__main__':
-    # parser = argparse.ArgumentParser(description='Load and save HAM10000 dataset')
-    # parser.add_argument('--data_dir', type=str, default=os.environ.get('DATASET_DIR', './data'),
-    #                     help='Path to directory containing the HAM10000 dataset')
-    # parser.add_argument('--version', type=str, default='v1',
-    #                     help='Version number or date of the dataset')
-    # args = parser.parse_args()
-    #
-    # train_data, test_data = load_data(args.data_dir, args.version)
-    #
-    # train_df = pd.DataFrame({'image_path': train_data.filepaths, 'class': train_data.labels})
-    # test_df = pd.DataFrame({'image_path': test_data.filepaths, 'class': test_data.labels})
-    #
-    # save_data(train_df, os.path.join(args.data_dir, 'train.csv'))
-    # save_data(test_df, os.path.join(args.data_dir, 'test.csv'))
-    #
-    # # not used in this stub but often useful for finding various files
-    # project_dir = Path(__file__).resolve().parents[2]
-    #
-    # # find .env automagically by walking up directories until it's found, then
-    # # load up the .env entries as environment variables
-    # load_dotenv(find_dotenv())
-    # # Usage example:
-    # data_dir = 'path/to/data'
-    # cache_dir = 'path/to/cache'
-    #
-    # # Load and preprocess the HAM10000 dataset
-    # dataset = load_ham10000(data_dir)
-    #
-    # # Cache the preprocessed images
-    # cached_dataset = cache_dataset(dataset, cache_dir)
-    #
-    # # Use the cached dataset for training
-    # train_dataset = cached_dataset.take(8000).shuffle(8000).batch(batch_size)
-    # val_dataset = cached_dataset.skip(8000).take(1000).batch(batch_size)
-    # test_dataset = cached_dataset.skip(9000).batch(batch_size)
-    datasets = [
-        'HAM10000',
-        'ISIC2019',
-        'ISIC2020'
-    ]
-    for dataset_name in datasets:
-        data, labels = make_dataset(dataset_name, data_dir, image_size, batch_size, shuffle_buffer_size)
-        x_train, y_train, x_val, y_val, x_test, y_test = split_data(data, labels)
+def parse_dcm_image(img_path):
+    img = pydicom.dcmread(img_path).pixel_array
+    img = tf.convert_to_tensor(img, dtype=tf.float32)
+    img = tf.expand_dims(img, axis=-1)  # Add channel dimension
+    return img
 
-        # create a separate folder for each dataset
-        dataset_dir = os.path.join(data_dir, 'processed', dataset_name)
-        os.makedirs(dataset_dir, exist_ok=True)
+def load_csv_files(data_path, year):
+    df_list = []
+    for subdir, dirs, files in os.walk(data_path):
+        for file in files:
+            if file.endswith(".csv"):
+                if "metadata" in file.lower():
+                    continue
+                if year == 2016:
+                    df = pd.read_csv(os.path.join(subdir, file), header=None)
+                    df.columns = ['id', 'label']
+                    df['label'] = df['label'].replace({'benign': 0, 'malignant': 1})
+                else:
+                    df = pd.read_csv(os.path.join(subdir, file))
+                    df.rename(columns={df.columns[0]: 'id'}, inplace=True)
+                    if year in [2017, 2018, 2019]:
+                        mel_keyword = 'melanoma' if year == 2017 else 'MEL'
+                        df['label'] = df[mel_keyword]
+                    else:  # year == 2020
+                        df.rename(columns={'target': 'label'}, inplace=True)
+                df = df[['id', 'label']]
+                df.set_index('id', inplace=True)
+                df_list.append(df)
+    return pd.concat(df_list)
 
-        # save the split datasets for further use
-        np.save(os.path.join(dataset_dir, 'train_data.npy'), x_train)
-        np.save(os.path.join(dataset_dir, 'train_labels.npy'), y_train)
-        np.save(os.path.join(dataset_dir, 'val_data.npy'), x_val)
-        np.save(os.path.join(dataset_dir, 'val_labels.npy'), y_val)
-        np.save(os.path.join(dataset_dir, 'test_data.npy'), x_test)
-        np.save(os.path.join(dataset_dir, 'test_labels.npy'), y_test)
+
+import matplotlib.pyplot as plt
+
+def plot_label_distribution(labels):
+    unique_labels, counts = np.unique(labels, return_counts=True)
+    plt.bar(unique_labels, counts)
+    plt.xlabel('Label')
+    plt.ylabel('Count')
+    plt.title('Distribution of Labels')
+    plt.show()
+
+class Dataset:
+    def __init__(self, train, val, test):
+        self.train = train
+        self.val = val
+        self.test = test
+
+def parse_image(img_path):
+    img = tf.io.read_file(img_path)
+    img = tf.image.decode_jpeg(img, channels=3)
+    img = tf.image.convert_image_dtype(img, tf.float32)
+    img = tf.image.resize(img, [256, 256])
+    return img
+
+def parse_data(data_path, img_ext, batch_size, image_parser=parse_image, train_prop=0.7, val_prop=0.15, year=2016):
+    labels_df = load_csv_files(data_path, year)
+    labels_dict = labels_df['label'].to_dict()
+
+    img_paths = {"train": [], "val": [], "test": []}
+    img_labels = {"train": [], "val": [], "test": []}  # create a list for labels
+    for subdir, dirs, files in os.walk(data_path):
+        for file in files:
+            if file.endswith(img_ext):
+                img_id = os.path.splitext(file)[0]
+                if img_id in labels_dict:
+                    if "val" in subdir.lower():
+                        img_paths["val"].append(os.path.join(subdir, file))  # store only paths here
+                        img_labels["val"].append(labels_dict[img_id])  # store corresponding labels here
+                    elif "test" in subdir.lower():
+                        img_paths["test"].append(os.path.join(subdir, file))  # store only paths here
+                        img_labels["test"].append(labels_dict[img_id])  # store corresponding labels here
+                    else:
+                        img_paths["train"].append(os.path.join(subdir, file))  # if not explicitly mentioned use train by default
+                        img_labels["train"].append(labels_dict[img_id])
+
+    if len(img_paths["train"]) == 0 or len(img_paths["val"]) == 0 or len(img_paths["test"]) == 0:  # if no folders found, make manual split
+        img_paths = img_paths["train"] + img_paths["val"] + img_paths["test"]
+        img_labels = img_labels["train"] + img_labels["val"] + img_labels["test"]
+
+        np.random.seed(42)
+        indices = np.arange(len(img_paths))  # create a list of indices
+        np.random.shuffle(indices)  # shuffle the indices
+
+        total_size = len(img_paths)
+        train_idx = int(train_prop * total_size)
+        val_idx = int((train_prop + val_prop) * total_size)
+
+        train_img_paths = np.array(img_paths)[indices[:train_idx]]
+        train_img_labels = np.array(img_labels)[indices[:train_idx]]
+
+        val_img_paths = np.array(img_paths)[indices[train_idx:val_idx]]
+        val_img_labels = np.array(img_labels)[indices[train_idx:val_idx]]
+
+        test_img_paths = np.array(img_paths)[indices[val_idx:]]
+        test_img_labels = np.array(img_labels)[indices[val_idx:]]
+
+        img_paths = {"train": train_img_paths, "val": val_img_paths, "test": test_img_paths}
+        img_labels = {"train": train_img_labels, "val": val_img_labels, "test": test_img_labels}
+
+    # Create tf.data.Datasets
+    datasets = {}
+    for split in ["train", "val", "test"]:
+        datasets[split] = tf.data.Dataset.from_tensor_slices((img_paths[split], img_labels[split]))
+        datasets[split] = datasets[split].map(lambda x, y: (image_parser(x), y), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
+        if split == "train":
+            datasets[split] = datasets[split].shuffle(buffer_size=100)  # Shuffle the training data before each epoch
+
+        datasets[split] = datasets[split].batch(batch_size)
+        datasets[split] = datasets[split].prefetch(tf.data.experimental.AUTOTUNE)
+
+    return Dataset(datasets["train"], datasets["val"], datasets["test"])
+
+
+def load_isic2016_data(data_path, batch_size):
+    return parse_data(data_path, ".jpg", batch_size, year=2016)
+
+def load_isic2017_data(data_path, batch_size):
+    return parse_data(data_path, ".jpg", batch_size, year=2017)
+
+def load_isic2018_data(data_path, batch_size):
+    return parse_data(data_path, ".jpg", batch_size, year=2018)
+
+def load_isic2019_data(data_path, batch_size):
+    return parse_data(data_path, ".jpg", batch_size, year=2019)
+
+def load_isic2020_data(data_path, batch_size):
+    return parse_data(data_path, ".jpg", batch_size, year=2020)
+
+
+def load_dataset(data_path, batch_size):
+    if "isic2016" in data_path.lower():
+        return load_isic2016_data(data_path, batch_size)
+    elif "isic2017" in data_path.lower():
+        return load_isic2017_data(data_path, batch_size)
+    elif "isic2018" in data_path.lower() or "ham10000" in data_path.lower():
+        return load_isic2018_data(data_path, batch_size)
+    elif "isic2019" in data_path.lower():
+        return load_isic2019_data(data_path, batch_size)
+    elif "isic2020" in data_path.lower():
+        return load_isic2020_data(data_path, batch_size)
+    else:
+        raise ValueError(f"Invalid dataset name for: {data_path}")
+
+if __name__ == "__main__":
+    from src.data.dataset_generator import DatasetGenerator
+
+    # Initialize dataset generator
+    relative_path = os.path.join('..', '..', '..', 'data', 'master-thesis-data')
+    absolute_path = os.path.abspath(relative_path)
+    print(absolute_path)
+    dataset_generator = DatasetGenerator(absolute_path, augment=False, batch_size=32)

@@ -1,47 +1,115 @@
-import argparse
-import tensorflow as tf
-from tensorflow.keras.callbacks import TensorBoard, EarlyStopping
+# src/models/train_model.py
 import os
-from datetime import datetime
-from src.models import model_builder
-from ..data.utils import load_data
-import yaml
+import time
 
+import tensorflow as tf
+from keras.optimizers.schedules.learning_rate_schedule import ExponentialDecay
+from tensorflow.keras import callbacks
+from tensorflow.keras.metrics import BinaryAccuracy, Precision, Recall, AUC
+from tensorflow.keras.metrics import MeanIoU
+from tensorflow.keras import backend as K
 
-def train_model(args):
-    with open(args.config_path) as config_file:
-        config = yaml.safe_load(config_file)
+class F1Score(tf.keras.metrics.Metric):
+    def __init__(self, name='f1_score', **kwargs):
+        super().__init__(name=name, **kwargs)
+        self.precision = Precision()
+        self.recall = Recall()
 
-    x_train, y_train, x_val, y_val, _, _ = load_data(args.dataset_dir)
-    model = model_builder.get_model(config['model_name'], config['input_shape'], config['num_classes'])
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        self.precision.update_state(y_true, y_pred, sample_weight)
+        self.recall.update_state(y_true, y_pred, sample_weight)
 
-    model.compile(optimizer=tf.keras.optimizers.Adam(lr=config['learning_rate']),
-                  loss='sparse_categorical_crossentropy',
-                  metrics=['accuracy'])
+    def reset_state(self):
+        self.precision.reset_state()
+        self.recall.reset_state()
 
-    # TensorBoard
-    log_dir = "logs/fit/" + datetime.now().strftime("%Y%m%d-%H%M%S")
-    tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
+    def result(self):
+        precision = self.precision.result()
+        recall = self.recall.result()
+        return 2 * ((precision * recall) / (precision + recall + K.epsilon()))
 
-    early_stopping_callback = EarlyStopping(monitor='val_loss', patience=3)
+class ModelTrainer:
 
-    history = model.fit(x_train, y_train,
-                        batch_size=config['batch_size'],
-                        epochs=config['epochs'],
-                        validation_data=(x_val, y_val),
-                        callbacks=[tensorboard_callback, early_stopping_callback])
+    def __init__(self, epochs=15, batch_size=32, patience=10, input_shape=None, metrics=None,
+                 scheduler='constant'):
+        self.history = None
+        self.training_time = None
+        self.n_params = None
+        self.inference_time = None
+        self.model = None
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.patience = patience
+        self.input_shape = input_shape
+        self.scheduler = scheduler
+        if metrics is None:
+            self.metrics = [BinaryAccuracy(), Precision(), Recall(), AUC(), F1Score(), MeanIoU(num_classes=2)]
+        else:
+            self.metrics = [metric() for metric in metrics]
+    def train(self, train_dataset, validation_dataset, dataset_name, model_name):
+        start_time = time.time()
 
-    # Save model
-    model.save(os.path.join(args.model_dir, args.model_name + '.h5'))
-    return history
+        initial_learning_rate = 0.001
+        decay_steps = 1000
+        decay_rate = 0.96
 
+        lr_schedule = ExponentialDecay(
+            initial_learning_rate,
+            decay_steps=decay_steps,
+            decay_rate=decay_rate,
+            staircase=True
+        )
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Train model')
-    parser.add_argument('--dataset_dir', type=str, help='Directory containing the dataset')
-    parser.add_argument('--model_name', type=str, help='Name of the model to train')
-    parser.add_argument('--model_dir', type=str, help='Directory to save the trained model')
-    parser.add_argument('--config_path', type=str, help='Path to configuration file')
-    args = parser.parse_args()
+        optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
 
-    train_model(args)
+        self.model.compile(
+            optimizer=optimizer,
+            loss=tf.keras.losses.BinaryCrossentropy(from_logits=False),
+            metrics=self.metrics)
+
+        checkpoint_path = os.path.join('models', 'checkpoints', dataset_name, model_name, 'model.h5')
+        os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
+
+        checkpoint_cb = callbacks.ModelCheckpoint(checkpoint_path, save_best_only=True)
+        early_stopping_cb = callbacks.EarlyStopping(patience=self.patience, restore_best_weights=True)
+        class_weights = {0: 0.9, 1: 1}
+
+        self.history = self.model.fit(
+            train_dataset,
+            epochs=self.epochs,
+            validation_data=validation_dataset,
+            callbacks=[checkpoint_cb, early_stopping_cb],
+            class_weight=class_weights,
+            verbose=1)
+
+        end_time = time.time()
+        self.training_time = end_time - start_time
+
+        print(f"Model training finished. Total training time: {self.training_time} seconds")
+        # Clear GPU memory
+        tf.keras.backend.clear_session()
+
+        return self.history, self.training_time
+
+    def evaluate(self, test_dataset):
+        start_eval_time = time.time()
+        evaluation_metrics = self.model.evaluate(test_dataset)
+        end_eval_time = time.time()
+
+        self.inference_time = end_eval_time - start_eval_time
+        self.n_params = self.model.count_params()
+
+        history = {key: value.numpy().tolist() if isinstance(value, tf.Tensor) else value for key, value in
+                   self.history.history.items()}
+        results = {
+            'train_time': self.training_time,
+            'eval_time': self.inference_time,
+            'n_params': self.n_params,
+            'evaluation_metrics': evaluation_metrics,
+            'history': history
+        }
+
+        return results
+
+    def predict(self, x):
+        return self.model.predict(x)
