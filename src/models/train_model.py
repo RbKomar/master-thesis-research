@@ -9,6 +9,7 @@ from tensorflow.keras.metrics import BinaryAccuracy, Precision, Recall, AUC
 from tensorflow.keras.metrics import MeanIoU
 from tensorflow.keras import backend as K
 
+
 class F1Score(tf.keras.metrics.Metric):
     def __init__(self, name='f1_score', **kwargs):
         super().__init__(name=name, **kwargs)
@@ -28,10 +29,13 @@ class F1Score(tf.keras.metrics.Metric):
         recall = self.recall.result()
         return 2 * ((precision * recall) / (precision + recall + K.epsilon()))
 
+
 class ModelTrainer:
 
     def __init__(self, epochs=15, batch_size=32, patience=10, input_shape=None, metrics=None,
-                 scheduler='constant'):
+                 scheduler='constant', save_model=True, class_weight=None):
+        if class_weight is None:
+            class_weight = {0: 1, 1: 1}
         self.history = None
         self.training_time = None
         self.n_params = None
@@ -42,10 +46,16 @@ class ModelTrainer:
         self.patience = patience
         self.input_shape = input_shape
         self.scheduler = scheduler
+        self.save_model = save_model
+        if class_weight is None:
+            self.class_weight = {0: 1, 1: 1}
+        else:
+            self.class_weight = class_weight
         if metrics is None:
             self.metrics = [BinaryAccuracy(), Precision(), Recall(), AUC(), F1Score(), MeanIoU(num_classes=2)]
         else:
             self.metrics = [metric() for metric in metrics]
+
     def train(self, train_dataset, validation_dataset, dataset_name, model_name):
         start_time = time.time()
 
@@ -67,20 +77,28 @@ class ModelTrainer:
             loss=tf.keras.losses.BinaryCrossentropy(from_logits=False),
             metrics=self.metrics)
 
-        checkpoint_path = os.path.join('models', 'checkpoints', dataset_name, model_name, 'model.h5')
-        os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
-
-        checkpoint_cb = callbacks.ModelCheckpoint(checkpoint_path, save_best_only=True)
         early_stopping_cb = callbacks.EarlyStopping(patience=self.patience, restore_best_weights=True)
         class_weights = {0: 0.9, 1: 1}
+        if self.save_model:
+            checkpoint_path = os.path.join('models', 'checkpoints', dataset_name, model_name, 'model.h5')
+            os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
+            checkpoint_cb = callbacks.ModelCheckpoint(checkpoint_path, save_best_only=True)
 
-        self.history = self.model.fit(
-            train_dataset,
-            epochs=self.epochs,
-            validation_data=validation_dataset,
-            callbacks=[checkpoint_cb, early_stopping_cb],
-            class_weight=class_weights,
-            verbose=1)
+            self.history = self.model.fit(
+                train_dataset,
+                epochs=self.epochs,
+                validation_data=validation_dataset,
+                callbacks=[checkpoint_cb, early_stopping_cb],
+                class_weight=class_weights,
+                verbose=1)
+        else:
+            self.history = self.model.fit(
+                train_dataset,
+                epochs=self.epochs,
+                validation_data=validation_dataset,
+                callbacks=[early_stopping_cb],
+                class_weight=class_weights,
+                verbose=1)
 
         end_time = time.time()
         self.training_time = end_time - start_time

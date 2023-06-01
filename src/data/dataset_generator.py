@@ -2,8 +2,6 @@
 import os
 import json
 
-import cv2
-
 from .make_dataset import load_dataset, load_isic2016_data, load_isic2017_data, load_isic2018_data, load_isic2019_data, \
     load_isic2020_data
 from .augmentation import DataAugmenter
@@ -67,7 +65,8 @@ class DatasetGenerator:
 
     def generate_datasets(self):
         for dataset_name in self.dataset_names:
-            dataset = load_dataset(os.path.join(self.dataset_dir, dataset_name), self.batch_size)
+            dataset = load_dataset(os.path.join(self.dataset_dir, dataset_name), self.batch_size,
+                                   obscure_images_percent=self.obscure_percent)
             if self.augment:
                 dataset_name += "_augmented"
                 dataset.train = self.data_augmentation.augment(dataset.train)
