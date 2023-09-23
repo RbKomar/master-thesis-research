@@ -2,7 +2,7 @@ import time
 import pandas as pd
 from baseline import create_model as create_baseline_model, compile_model as compile_baseline_model
 
-from src.data.make_dataset import load_data
+from src.ai_part.data import load_data
 
 
 def train_and_compare(models, model_names, train_dataset, val_dataset, epochs=10):

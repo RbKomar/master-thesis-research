@@ -1,7 +1,7 @@
 import argparse
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from src.models import ModelBuilder
-from src.data import load_data
+from src.ai_part.models import ModelBuilder
+from src.ai_part.data import load_data
 
 def predict_and_compare(model_name: str, dataset_name: str):
     # Load model

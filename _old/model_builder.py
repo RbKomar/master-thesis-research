@@ -2,7 +2,7 @@
 from tensorflow.keras.applications import VGG16, ResNet50
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Flatten, Dense
-from src.models.baseline import BaselineModel
+from src.ai_part.models.baseline import BaselineModel
 
 
 class ModelBuilder:

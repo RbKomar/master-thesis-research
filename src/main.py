@@ -8,13 +8,13 @@ gpus = tf.config.experimental.list_physical_devices('GPU')
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
-from data.dataset_generator import DatasetGenerator
-from models.vgg_model import VGGModelTrainer
-from models.resnet_model import ResNet152ModelTrainer
-from models.googlenet_model import GoogLeNetModelTrainer
-from models.xception_model import XceptionModelTrainer
-from models.efficienet_model import EfficientNetModelTrainer
-from models.baseline import BaselineTrainer
+from src.ai_part.data.dataset_generator import DatasetGenerator
+from src.ai_part.models.vgg_model import VGGModelTrainer
+from src.ai_part.models.resnet_model import ResNet152ModelTrainer
+from src.ai_part.models.googlenet_model import GoogLeNetModelTrainer
+from src.ai_part.models.xception_model import XceptionModelTrainer
+from src.ai_part.models.efficienet_model import EfficientNetModelTrainer
+from src.ai_part.models.baseline import BaselineTrainer
 
 # Initialize model trainers
 INPUT_SHAPE = (256, 256, 3)
@@ -31,7 +31,7 @@ googlenet_trainer = GoogLeNetModelTrainer(input_shape=INPUT_SHAPE, epochs=EPOCHS
 baseline = BaselineTrainer(input_shape=INPUT_SHAPE, epochs=EPOCHS)
 
 # Initialize dataset generator
-relative_path = os.path.join('..', '..', '..', 'data', 'master-thesis-data')
+relative_path = os.path.join('..', '..', '..', 'ai_part/data', 'master-thesis-data')
 absolute_path = os.path.abspath(relative_path)
 dataset_generator = DatasetGenerator(absolute_path, augment=False, batch_size=32)
 
@@ -67,7 +67,7 @@ for dataset_name, dataset in dataset_generator.generate_datasets():
         tf.keras.backend.clear_session()
     break
 
-relative_path = os.path.join('..', '..', '..', 'data', 'master-thesis-data')
+relative_path = os.path.join('..', '..', '..', 'ai_part/data', 'master-thesis-data')
 absolute_path = os.path.abspath(relative_path)
 dataset_generator = DatasetGenerator(absolute_path, augment=False, obscure_percent=70,  batch_size=32)
 

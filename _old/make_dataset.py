@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 
-from src.data.make_dataset import load_ham10000, load_isic2016, load_isic2017, load_isic2019, load_isic2020
+from src.ai_part.data import load_ham10000, load_isic2016, load_isic2017, load_isic2019, load_isic2020
 from _old.preprocessing import preprocess_image
 
 logger = logging.getLogger("master-thesis")
