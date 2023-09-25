@@ -4,7 +4,7 @@ from typing import List, Type, Union
 
 from src.master_thesis.config.config import ConfigManager
 from src.master_thesis.models.evaluation.evaluator import ModelEvaluator
-from src.master_thesis.models.train_model import ModelTrainer
+from src.master_thesis.models.train_model import ModelHandler
 from src.master_thesis.models.visualization.visualizer import ModelVisualizer  # Importing ModelVisualizer
 
 logger = logging.getLogger("PipelineController")
@@ -22,7 +22,7 @@ class PipelineController:
         self.models_without_imagenet = []
         self.results = {}
 
-    def add_models(self, model_trainer: Union[ModelTrainer, List[Type[ModelTrainer]]]):
+    def add_models(self, model_trainer: Union[ModelHandler, List[Type[ModelHandler]]]):
         try:
             if isinstance(model_trainer, list):
                 for model in model_trainer:
@@ -32,7 +32,7 @@ class PipelineController:
         except Exception as e:
             logger.error(f"Error occurred while adding models: {str(e)}", exc_info=True)
 
-    def create_models(self, model_trainer: ModelTrainer):
+    def create_models(self, model_trainer: ModelHandler):
         try:
             model_trainer_with_imagenet = model_trainer(use_imagenet=True,
                                                         epochs=self.config_manager.epochs,

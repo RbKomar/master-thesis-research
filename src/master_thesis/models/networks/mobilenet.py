@@ -2,10 +2,10 @@ from keras import Model
 from keras.layers import Flatten, Dense
 from tensorflow.keras.applications import MobileNet
 
-from src.master_thesis.models.train_model import ModelTrainer
+from src.master_thesis.models.train_model import ModelHandler
 
 
-class MobileNetModelHandler(ModelTrainer):
+class MobileNetModelHandler(ModelHandler):
     def __init__(self, num_classes=1, use_imagenet=True, custom_layers=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.num_classes = num_classes

@@ -1,48 +1,45 @@
-# Import the required model handler classes
-from src.master_thesis.models.baseline import BaselineModelHandler
-from src.master_thesis.models.efficientnet import EfficientNetModelHandler
-from src.master_thesis.models.mobilenet import MobileNetModelHandler
-from src.master_thesis.models.resnet import ResNetModelHandler
-from src.master_thesis.models.vgg import VGGModelHandler
+import importlib
+from typing import Type
+
+from src.master_thesis.config.config import logger
+from src.master_thesis.models.train_model import ModelHandlerInterface
 
 
 class ModelFactory:
-    """
-    A class used to create model handler objects based on a string identifier.
-    """
-    # Dictionary to map string identifiers to corresponding model handler classes.
     model_handler_mapping = {
-        "BaselineModelHandler": BaselineModelHandler,
-        "EfficientNetModelHandler": EfficientNetModelHandler,
-        "MobileNetModelHandler": MobileNetModelHandler,
-        "ResNetModelHandler": ResNetModelHandler,
-        "VGGModelHandler": VGGModelHandler
+        "BaselineModelHandler": "src.master_thesis.models.networks.baseline.BaselineModelHandler",
+        "EfficientNetModelHandler": "src.master_thesis.models.networks.efficientnet.EfficientNetModelHandler",
+        "MobileNetModelHandler": "src.master_thesis.models.networks.mobilenet.MobileNetModelHandler",
+        "ResNetModelHandler": "src.master_thesis.models.networks.resnet.ResNetModelHandler",
+        "VGGModelHandler": "src.master_thesis.models.networks.vgg.VGGModelHandler"
     }
 
     @classmethod
-    def create_model_handler(cls, identifier, *args, **kwargs):
-        """
-        A method to create a model handler object based on the given string identifier.
-        :param identifier: A string representing the model handler class to be instantiated.
-        :param args: Positional arguments to be passed to the model handler class's constructor.
-        :param kwargs: Keyword arguments to be passed to the model handler class's constructor.
-        :return: An instance of the model handler class corresponding to the given identifier.
-        """
-        # Get the model handler class from the mapping.
-        model_handler_class = cls.model_handler_mapping.get(identifier)
+    def create_model_handler(cls, identifier: str, *args, **kwargs) -> Type[ModelHandlerInterface]:
+        model_path = cls.model_handler_mapping.get(identifier)
 
-        # Raise an error if the identifier does not match any model handler class.
-        if model_handler_class is None:
-            raise ValueError(
-                f"Invalid identifier: {identifier}. Valid identifiers are {list(cls.model_handler_mapping.keys())}.")
+        if model_path is None:
+            valid_identifiers = list(cls.model_handler_mapping.keys())
+            logger.error(f"Invalid identifier: {identifier}. Valid identifiers are {valid_identifiers}.")
+            raise ValueError(f"Invalid identifier: {identifier}. Valid identifiers are {valid_identifiers}.")
 
-        # Create and return an instance of the model handler class.
-        return model_handler_class(*args, **kwargs)
+        module_name, class_name = model_path.rsplit(".", 1)
+        ModelClass = getattr(importlib.import_module(module_name), class_name)
+
+        return ModelClass(*args, **kwargs)
+
+    @classmethod
+    def model_handler_generator(cls, *args, **kwargs):
+        for identifier in cls.model_handler_mapping.keys():
+            try:
+                yield cls.create_model_handler(identifier, *args, **kwargs)
+            except Exception as e:
+                logger.error(f"Error while creating {identifier}: {str(e)}")
 
 
-# Example of using Model Factory
-try:
-    model_handler = ModelFactory.create_model_handler("BaselineModelHandler", num_classes=2)
-    print(f"Successfully created a {type(model_handler)} object.")
-except ValueError as ve:
-    print(ve)
+# for model_handler in ModelFactory.model_handler_generator(num_classes=2):
+#     # Here, model_handler is an instance of one of the available model handler classes.
+#     # You can perform whatever operations you need with this instance, such as training or evaluation.
+#     logger.info(f"Successfully created a {type(model_handler)} object.")
+#     model_handler.train(...)  # Example operation
+#     model_handler.evaluate(...)  # Example operation

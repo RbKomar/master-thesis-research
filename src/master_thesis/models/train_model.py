@@ -7,8 +7,28 @@ from tensorflow.keras.metrics import BinaryAccuracy, Precision, Recall, AUC, Mea
 
 from src.master_thesis.models.evaluation.metrics import F1Score
 
+from abc import ABC, abstractmethod
 
-class ModelTrainer:
+
+class ModelHandlerInterface(ABC):
+
+    @abstractmethod
+    def train(self, model, train_dataset, validation_dataset, dataset_name, model_name):
+        """Trains the provided model with the given datasets."""
+        pass
+
+    @abstractmethod
+    def evaluate(self, test_dataset):
+        """Evaluates the model on the test dataset."""
+        pass
+
+    @abstractmethod
+    def predict(self, x):
+        """Predicts the output given an input x."""
+        pass
+
+
+class ModelHandler(ModelHandlerInterface):
     DEFAULT_CLASS_WEIGHT = {0: 1, 1: 1}
     DEFAULT_METRICS = [BinaryAccuracy(), Precision(), Recall(), AUC(), F1Score(), MeanIoU(num_classes=2)]
 
@@ -64,11 +84,10 @@ class ModelTrainer:
         return self.history, self.training_time
 
     def evaluate(self, test_dataset):
-        start_eval_time = time.time()
+        t0 = time.perf_counter()
         evaluation_metrics = self.model.evaluate(test_dataset)
-        end_eval_time = time.time()
-
-        self.inference_time = end_eval_time - start_eval_time
+        t1 = time.perf_counter()
+        self.inference_time = t1 - t0
         self.n_params = self.model.count_params()
 
         history = {key: value.numpy().tolist() if isinstance(value, tf.Tensor) else value for key, value in

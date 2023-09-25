@@ -1,32 +1,9 @@
-from abc import ABC, abstractmethod
+from src.master_thesis.models.model_factory import ModelFactory
+from src.master_thesis.pipelines.model_pipeline.interfaces import IModelHandler, IEvaluator, IVisualizer
 
-
-# Interfaces
-
-class IModelHandler(ABC):
-    @abstractmethod
-    def train(self):
-        pass
-
-    @abstractmethod
-    def evaluate(self):
-        pass
-
-
-class IEvaluator(ABC):
-    @abstractmethod
-    def evaluate_model(self, model):
-        pass
-
-
-class IVisualizer(ABC):
-    @abstractmethod
-    def visualize(self, results):
-        pass
 
 
 # Classes implementing the interfaces
-
 class ModelHandler(IModelHandler):
     def train(self):
         print("Training Model")
@@ -44,13 +21,6 @@ class ModelEvaluator(IEvaluator):
 class ModelVisualizer(IVisualizer):
     def visualize(self, results):
         print(f"Visualizing Results: {results}")
-
-
-class ModelFactory:
-    @staticmethod
-    def create_model_handler():
-        return ModelHandler()
-
 
 class ModelPipeline:
     def __init__(self, model_handler: IModelHandler, evaluator: IEvaluator, visualizer: IVisualizer):

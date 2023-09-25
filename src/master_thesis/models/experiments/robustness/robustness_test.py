@@ -4,12 +4,12 @@ from src.master_thesis.data.processing.image_processor import ImageProcessor
 from plotting import PerformanceVisualization  # Placeholder for visualization logic
 
 from src.master_thesis.models.evaluation.evaluator import ModelEvaluator
-from src.master_thesis.models.train_model import ModelTrainer
+from src.master_thesis.models.train_model import ModelHandler
 
 
 class RobustnessTester:
 
-    def __init__(self, model: ModelTrainer, evaluator: ModelEvaluator, dataset_path,
+    def __init__(self, model: ModelHandler, evaluator: ModelEvaluator, dataset_path,
                  augmenter: DataAugmenter, generator: DatasetGenerator):
         self.dataset_path = dataset_path
         self.augmenter = augmenter

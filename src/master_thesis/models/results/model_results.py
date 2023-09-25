@@ -1,6 +1,6 @@
 import json
 
-from src.master_thesis.models.train_model import ModelTrainer
+from src.master_thesis.models.train_model import ModelHandler
 import logging
 
 logger = logging.getLogger("ModelResults")
@@ -35,7 +35,7 @@ class ModelResults:
             logger.error(f"Failed to decode JSON from {file_path}.")
             raise json.JSONDecodeError(f"Failed to decode JSON from {file_path}.")
 
-    def add_model_result(self, model_name: str, model_trainer: ModelTrainer):
+    def add_model_result(self, model_name: str, model_trainer: ModelHandler):
         """
         Add results of a model to the internal dictionary.
 

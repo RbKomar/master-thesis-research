@@ -4,10 +4,10 @@ from tensorflow.keras.applications import EfficientNetB2
 from tensorflow.keras.layers import Flatten, Dense
 from tensorflow.keras.models import Model
 
-from src.master_thesis.models.train_model import ModelTrainer
+from src.master_thesis.models.train_model import ModelHandler
 
 
-class EfficientNetModelHandler(ModelTrainer):
+class EfficientNetModelHandler(ModelHandler):
 
     def __init__(self, num_classes=1, use_imagenet=True, custom_layers=None, *args, **kwargs):
         super().__init__(*args, **kwargs)

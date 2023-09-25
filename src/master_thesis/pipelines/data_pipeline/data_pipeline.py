@@ -1,10 +1,11 @@
 import pickle
+
 from src.master_thesis.data.generator.dataset_generator import DatasetGenerator
-from src.master_thesis.data.processing.image_processor import ImageProcessor
-from src.master_thesis.data.handler.hashing import ImageHasher
-from src.master_thesis.data.management.dataset_manager import Dataset
-from src.master_thesis.data.visualization.visualizer import DataVisualizer
 from src.master_thesis.data.handler.dicom_parser import parse_dcm_image
+from src.master_thesis.data.handler.hashing import ImageHasher
+from src.master_thesis.data.management.dataset_manager import DatasetManager
+from src.master_thesis.data.processing.image_processor import ImageParser
+from src.master_thesis.data.visualization.visualizer import DataVisualizer
 
 
 class DataPipeline:
@@ -15,7 +16,7 @@ class DataPipeline:
         """
         self.dataset_generator = DatasetGenerator(dataset_dir=dataset_dir, obscure_percent=obscure_percent,
                                                   batch_size=batch_size, augment=augment)
-        self.image_processor = ImageProcessor()
+        self.image_processor = ImageParser()
         self.image_hasher = ImageHasher()
         self.datasets = []
         self.visualizer = None
@@ -40,7 +41,7 @@ class DataPipeline:
                 split_data.loc[split_data['image_path'].isin(processed_images), 'image_path'] = processed_images
 
             # Managing the dataset using Dataset class and adding it to the datasets list
-            self.datasets.append(Dataset(train=dataset.train, val=dataset.val, test=dataset.test))
+            self.datasets.append(DatasetManager(train=dataset.train, val=dataset.val, test=dataset.test))
 
             # Initializing the DataVisualizer instance with the loaded data
             if self.visualizer is None:

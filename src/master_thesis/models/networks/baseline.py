@@ -2,7 +2,7 @@ from keras import Model
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
 from tensorflow.keras.models import Sequential
 
-from src.master_thesis.models.train_model import ModelTrainer
+from src.master_thesis.models.train_model import ModelHandler
 
 
 class BaselineModel:
@@ -24,7 +24,7 @@ class BaselineModel:
         return model
 
 
-class BaselineModelHandler(ModelTrainer):
+class BaselineModelHandler(ModelHandler):
 
     def __init__(self, num_classes=1, use_imagenet=True, custom_layers=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
