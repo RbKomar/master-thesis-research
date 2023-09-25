@@ -1,29 +1,5 @@
 import os
-
 import numpy as np
-
-from src.master_thesis.data.handler.data_handler import DataHandler
-from src.master_thesis.data.processing.image_processor import ImageParser
-
-
-class DatasetLoader:
-    @staticmethod
-    def load_isic_data(data_path, batch_size=32, obscure_images_percent=0.0, year=2016, image_parser=ImageParser):
-        data_handler = DataHandler(data_path, ".jpg", batch_size, image_parser.parse_image, obscure_images_percent,
-                                   train_prop=0.7, val_prop=0.15, year=year)
-        return data_handler.get_datasets()
-
-    def load(self, data_path, batch_size, obscure_images_percent=0.0):
-        result = None
-        for year in range(2016, 2021):
-            if f"isic{year}" in data_path.lower():
-                result = self.load_isic_data(data_path, batch_size,
-                                             obscure_images_percent=obscure_images_percent,
-                                             year=year)
-                break
-        else:
-            raise ValueError(f"Invalid dataset name for: {data_path}")
-        return result
 
 
 class ImagePathProcessor:

@@ -1,5 +1,5 @@
 from PIL import Image
-from src.master_thesis.data.processing.hashing import ImageHasher
+from src.master_thesis.data.handler.hashing import ImageHasher
 import unittest
 
 

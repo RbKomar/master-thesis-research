@@ -3,9 +3,10 @@ import os
 
 import tensorflow as tf
 
-from src.master_thesis.data.processing.hashing import ImageHasher
-from src.master_thesis.data.processing.augmentation import DataAugmenter
-from src.master_thesis.data.loader.dataset_loader import DatasetLoader
+from src.master_thesis.data.handler.hashing import ImageHasher
+from src.master_thesis.data.handler.augmentation import DataAugmenter
+from src.master_thesis.data.loader.base_loader import BaseLoader
+from src.master_thesis.data.management.results_manager import ResultsManager
 
 
 class DatasetGenerator:
@@ -15,23 +16,23 @@ class DatasetGenerator:
         self.dataset_names = os.listdir(dataset_dir)
         current_dir = os.path.dirname(os.path.abspath(__file__))
         self.results_dir = os.path.join(current_dir, '..', 'results', f'batch_size_{batch_size}')
-        self.augment = augment
         self.batch_size = batch_size
         self.obscure_percent = obscure_percent
-        self.data_augmentation = DataAugmenter() if augment else None
+        self.augmenter = DataAugmenter() if augment else None
 
-    def generate_combined_datasets(self, loader=DatasetLoader()):
+    def generate_combined_datasets(self, loader=BaseLoader()):
             combined_dataset = []
             image_hasher = ImageHasher()
 
             for dataset_name in os.listdir(self.dataset_dir):
+
                 dataset_path = os.path.join(self.dataset_dir, dataset_name)
                 if not os.path.isdir(dataset_path):
                     continue  # Skip non-directory files
 
                 dataset = loader.load(dataset_path)
 
-                if self.augment:
+                if self.augmenter:
                     dataset = self.augmenter.augment(dataset)
 
                 for image, label in dataset:
@@ -43,39 +44,19 @@ class DatasetGenerator:
 
             return combined_dataset
 
-    def generate_datasets(self, loader=DatasetLoader()):
+    def generate_datasets(self, loader=BaseLoader()):
         for dataset_name in self.dataset_names:
-            dataset = loader.load_isic_data(os.path.join(self.dataset_dir, dataset_name), self.batch_size,
+            dataset = loader.load(os.path.join(self.dataset_dir, dataset_name), self.batch_size,
                                             obscure_images_percent=self.obscure_percent)
-            if self.augment:
+            if self.augmenter:
                 dataset_name += "_augmented"
-                dataset.train = self.data_augmentation.augment(dataset.train)
-                dataset.val = self.data_augmentation.augment(dataset.val)
-                dataset.test = self.data_augmentation.augment(dataset.test)
+                dataset.train = self.augmenter.augment(dataset.train)
 
             yield dataset_name, dataset
 
     def save_results(self, model_name, dataset_name, results, epochs):
-        results_filename = f'results_epochs_{epochs}.json'
-        filepath = os.path.join(self.results_dir, results_filename)
-        results_dir = os.path.dirname(filepath)
-        if not os.path.exists(results_dir):
-            os.makedirs(results_dir)
-
-        if not os.path.exists(filepath):
-            with open(filepath, 'w+') as file:
-                json.dump({}, file)
-
-        with open(filepath, 'r') as file:
-            data = json.load(file)
-
-        if model_name not in data:
-            data[model_name] = {}
-
-        data[model_name][dataset_name] = results
-
-        with open(filepath, 'w+') as file:
-            json.dump(data, file)
+        results_manager = ResultsManager(self.results_dir)
+        results_manager.save_results(model_name, dataset_name, results, epochs)
 
 
 class DataSetCreator:
@@ -97,5 +78,4 @@ class DataSetCreator:
                 datasets[split] = datasets[split].shuffle(buffer_size=100)
             datasets[split] = datasets[split].batch(self.batch_size)
             datasets[split] = datasets[split].prefetch(tf.data.experimental.AUTOTUNE)
-
         return datasets

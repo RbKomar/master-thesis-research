@@ -12,20 +12,11 @@ class DatasetManager:
         self.val = val
         self.test = test
 
-    def __str__(self):
-        return f"DatasetManager(train: {self.train}, val: {self.val}, test: {self.test})"
-
-    def __repr__(self):
-        return f"DatasetManager(train: {self.train}, val: {self.val}, test: {self.test})"
-
     def __eq__(self, other):
         return self.train == other.train and self.val == other.val and self.test == other.test
 
     def __ne__(self, other):
         return not self.__eq__(other)
-
-    def __hash__(self):
-        return hash((self.train, self.val, self.test))
 
     def __len__(self):
         return len(self.train) + len(self.val) + len(self.test)

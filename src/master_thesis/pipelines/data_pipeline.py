@@ -1,7 +1,7 @@
 import pickle
 from src.master_thesis.data.generator.dataset_generator import DatasetGenerator
 from src.master_thesis.data.processing.image_processor import ImageProcessor
-from src.master_thesis.data.processing.hashing import ImageHasher
+from src.master_thesis.data.handler.hashing import ImageHasher
 from src.master_thesis.data.management.dataset_manager import Dataset
 from src.master_thesis.data.visualization.visualizer import DataVisualizer
 from src.master_thesis.data.handler.dicom_parser import parse_dcm_image
