@@ -1,4 +1,4 @@
-from src.master_thesis.data.generator.dataset_generator import DataSetCreator
+from src.master_thesis.data.generator.dataset_creator import DataSetCreator
 from src.master_thesis.data.loader.csv_loader import CSVLoader
 from src.master_thesis.data.processing.image_path_processor import ImagePathProcessor
 from src.master_thesis.data.management.dataset_manager import DatasetManager
