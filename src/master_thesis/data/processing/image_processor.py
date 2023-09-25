@@ -2,18 +2,21 @@ import numpy as np
 import tensorflow as tf
 
 
-class ImageProcessor:
-    def parse_image(self, img_path, obscure_images_percent):
+class ImageParser:
+    @staticmethod
+    def parse_image(img_path, obscure_images_percent):
         image = tf.io.read_file(img_path)
         image = tf.image.decode_jpeg(image, channels=3)  # assuming images are in JPEG format
         image = tf.image.resize(image, (224, 224))  # assuming resizing to 224x224 for model input
         if obscure_images_percent > 0:
-            image = self._obscure_image(image, obscure_images_percent)
+            image = ImageProcessor.obscure_image(image, obscure_images_percent)
         image = tf.cast(image, tf.float32) / 255.0  # Normalization to [0,1]
         return image
 
+
+class ImageProcessor:
     @staticmethod
-    def _obscure_image(image, obscure_images_percent):
+    def obscure_image(image, obscure_images_percent):
         img = image.numpy()
         total_area = img.shape[0] * img.shape[1]
         cover_area = total_area * obscure_images_percent

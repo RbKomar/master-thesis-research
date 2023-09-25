@@ -1,4 +1,7 @@
 import os
+import logging
+
+logger = logging.getLogger("ConfigManager")
 
 
 class ConfigManager:
@@ -14,7 +17,10 @@ class ConfigManager:
         self.epochs = None
         self.dataset_name = None
         self.environment = environment
-        self.setup_environment()
+        try:
+            self.setup_environment()
+        except Exception as e:
+            logger.error(f"Error occurred while setting up the environment: {str(e)}", exc_info=True)
 
     def setup_environment(self):
         """Setup configuration parameters based on the environment."""
@@ -44,4 +50,3 @@ class ConfigManager:
         """Return the configuration parameters as a string."""
         parameters = [f"{param} = {value}" for param, value in self.__dict__.items()]
         return "\n".join(parameters)
-
