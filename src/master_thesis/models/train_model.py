@@ -1,19 +1,22 @@
 import os
 import time
+from typing import Optional, List, Dict
 
 import tensorflow as tf
 from tensorflow.keras import callbacks
 from tensorflow.keras.metrics import BinaryAccuracy, Precision, Recall, AUC, MeanIoU
 
 from src.master_thesis.models.evaluation.metrics import F1Score
-
 from abc import ABC, abstractmethod
 
 
 class ModelHandlerInterface(ABC):
+    @abstractmethod
+    def _initialize_model(self):
+        pass
 
     @abstractmethod
-    def train(self, model, train_dataset, validation_dataset, dataset_name, model_name):
+    def train(self, train_dataset, validation_dataset, dataset_name, model_name):
         """Trains the provided model with the given datasets."""
         pass
 
@@ -28,12 +31,18 @@ class ModelHandlerInterface(ABC):
         pass
 
 
+import logging
+
+logger = logging.getLogger("ModelHandler")
+
+
 class ModelHandler(ModelHandlerInterface):
     DEFAULT_CLASS_WEIGHT = {0: 1, 1: 1}
     DEFAULT_METRICS = [BinaryAccuracy(), Precision(), Recall(), AUC(), F1Score(), MeanIoU(num_classes=2)]
 
-    def __init__(self, epochs=15, batch_size=32, patience=10, input_shape=None, metrics=None,
-                 scheduler='constant', save_model=True, class_weight=None):
+    def __init__(self, epochs: int = 15, batch_size: int = 32, patience: int = 10,
+                 input_shape: Optional[tuple] = None, metrics: Optional[List] = None,
+                 scheduler: str = 'constant', save_model: bool = True, class_weight: Optional[Dict[int, int]] = None):
         self.history = None
         self.training_time = None
         self.n_params = None
@@ -47,9 +56,22 @@ class ModelHandler(ModelHandlerInterface):
         self.save_model = save_model
         self.class_weight = class_weight if class_weight else self.DEFAULT_CLASS_WEIGHT
         self.metrics = metrics if metrics else self.DEFAULT_METRICS
+        self.logger = logger
+        self.logger.info("ModelHandler object has been initialized.")
 
-    def train(self, model, train_dataset, validation_dataset, dataset_name, model_name):
-        self.model = model
+    @abstractmethod
+    def _initialize_model(self):
+        pass
+
+    def _validate_train_data(self, model, train_dataset, validation_dataset):
+        if not model or not train_dataset or not validation_dataset:
+            self.logger.error("Invalid training or validation dataset provided.")
+            raise ValueError("Model, Training and Validation dataset cannot be None.")
+
+    def train(self, train_dataset, validation_dataset, dataset_name, model_name):
+        self._initialize_model()
+
+        self._validate_train_data(self.model, train_dataset, validation_dataset)
 
         # Early stopping callback
         early_stopping_cb = callbacks.EarlyStopping(patience=self.patience, restore_best_weights=True)
@@ -77,7 +99,8 @@ class ModelHandler(ModelHandlerInterface):
         end_time = time.time()
         self.training_time = end_time - start_time
 
-        print(f"Model training finished. Total training time: {self.training_time} seconds")
+        self.logger.info(
+            f"Training has been completed in {self.training_time} seconds for {model_name} on {dataset_name}.")
         # Clear GPU memory
         tf.keras.backend.clear_session()
 
@@ -90,16 +113,17 @@ class ModelHandler(ModelHandlerInterface):
         self.inference_time = t1 - t0
         self.n_params = self.model.count_params()
 
-        history = {key: value.numpy().tolist() if isinstance(value, tf.Tensor) else value for key, value in
-                   self.history.history.items()}
+        # Clearing the model after evaluation
+        tf.keras.backend.clear_session()
+
+        # construct results dict
         results = {
             'train_time': self.training_time,
             'eval_time': self.inference_time,
             'n_params': self.n_params,
             'evaluation_metrics': evaluation_metrics,
-            'history': history
+            'history': self.history.history
         }
-
         return results
 
     def predict(self, x):

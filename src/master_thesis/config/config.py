@@ -1,52 +1,70 @@
 import os
+import dataclasses
 import logging
 
 logger = logging.getLogger("ConfigManager")
 
 
+@dataclasses.dataclass
 class ConfigManager:
-    """Class to manage configuration settings."""
+    environment: str = 'development'
+    data_config: dict = dataclasses.field(default_factory=dict)
+    model_config: dict = dataclasses.field(default_factory=dict)
 
-    def __init__(self, environment='development'):
-        self.file_path = None
-        self.debug = None
-        self.batch_size = None
-        self.relative_path = None
-        self.input_shape = None
-        self.show_in_web = None
-        self.epochs = None
-        self.dataset_name = None
-        self.environment = environment
+    def __post_init__(self):
         try:
             self.setup_environment()
         except Exception as e:
             logger.error(f"Error occurred while setting up the environment: {str(e)}", exc_info=True)
 
+    def _setup_development_environment(self):
+        self.model_config.update({
+            'file_path': 'results_epochs_10_dev.json',
+            'debug': True,
+        })
+
+    def _setup_testing_environment(self):
+        self.model_config.update({
+            'file_path': 'results_epochs_10_test.json',
+            'debug': True,
+        })
+
+    def _setup_production_environment(self):
+        self.model_config.update({
+            'file_path': 'results_epochs_10_prod.json',
+            'debug': False,
+        })
+
     def setup_environment(self):
-        """Setup configuration parameters based on the environment."""
-        # Common Configuration
-        self.dataset_name = "HAM10000"
-        self.epochs = 10
-        self.show_in_web = True
-        self.input_shape = (256, 256, 3)
-        self.relative_path = os.path.join('data', 'master-thesis-data')
-        self.batch_size = 32  # Example of adding more configuration parameters
+        self.data_config.update({
+            'dataset_name': "HAM10000",
+            'epochs': 10,
+            'show_in_web': True,
+            'input_shape': (256, 256, 3),
+            'relative_path': os.path.join('data', 'master-thesis-data'),
+            'batch_size': 32,
+        })
 
-        # Environment Specific Configuration
-        if self.environment == 'production':
-            # Production specific configuration
-            self.debug = False
-            self.file_path = 'results_epochs_10_prod.json'
-        elif self.environment == 'testing':
-            # Testing specific configuration
-            self.debug = True
-            self.file_path = 'results_epochs_10_test.json'
-        else:  # development as default
-            # Development specific configuration
-            self.debug = True
-            self.file_path = 'results_epochs_10_dev.json'
+        self.model_config.update({
+            'learning_rate': 0.001,
+            'epochs': 10,
+            'batch_size': 32,
+            'optimizer': 'adam',  # 'adam', 'sgd', 'rmsprop', etc.
+            'loss_function': 'categorical_crossentropy',
+            'regularization': {
+                'l1': 0.0,
+                'l2': 0.01
+            },
+            'dropout_rate': 0.5,
+            'momentum': 0.9,  # Used if the optimizer is SGD
+            'lr_decay': 0,  # Learning rate decay over each update.
+            'weight_initializer': 'he_normal'  # Choose from 'he_normal', 'glorot_uniform', etc.
+        })
 
-    def __str__(self):
-        """Return the configuration parameters as a string."""
-        parameters = [f"{param} = {value}" for param, value in self.__dict__.items()]
-        return "\n".join(parameters)
+        environment = os.environ.get('ENVIRONMENT', self.environment)
+        if environment == 'production':
+            self._setup_production_environment()
+        elif environment == 'testing':
+            self._setup_testing_environment()
+        else:
+            self._setup_development_environment()

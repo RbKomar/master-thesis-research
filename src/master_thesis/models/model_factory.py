@@ -36,6 +36,11 @@ class ModelFactory:
             except Exception as e:
                 logger.error(f"Error while creating {identifier}: {str(e)}")
 
+    @classmethod
+    def register_model_handler(cls, identifier: str, model_path: str) -> None:
+        if identifier in cls.model_handler_mapping:
+            logger.warning(f"{identifier} already exists in the mapping and will be overridden.")
+        cls.model_handler_mapping[identifier] = model_path
 
 # for model_handler in ModelFactory.model_handler_generator(num_classes=2):
 #     # Here, model_handler is an instance of one of the available model handler classes.

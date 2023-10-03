@@ -9,13 +9,12 @@ from src.master_thesis.data.visualization.visualizer import DataVisualizer
 
 
 class DataPipeline:
-    def __init__(self, dataset_dir, obscure_percent=0, batch_size=32, augment=False):
-        """
-        Initializes the DataPipeline instance with the provided parameters.
-        It also initializes the DatasetGenerator and ImageProcessor instances.
-        """
-        self.dataset_generator = DatasetGenerator(dataset_dir=dataset_dir, obscure_percent=obscure_percent,
-                                                  batch_size=batch_size, augment=augment)
+    def __init__(self, config):
+        self.config = config
+        self.dataset_generator = DatasetGenerator(dataset_dir=config['dataset_dir'],
+                                                  obscure_percent=config.get('obscure_percent', 0),
+                                                  batch_size=config.get('batch_size', 32),
+                                                  augment=config.get('augment', False))
         self.image_processor = ImageParser()
         self.image_hasher = ImageHasher()
         self.datasets = []
@@ -50,15 +49,24 @@ class DataPipeline:
                 new_data = dataset.train.append([dataset.val, dataset.test])
                 self.visualizer.data = self.visualizer.data.append(new_data, ignore_index=True)
 
-    def visualize_data(self):
-        """Visualizes the loaded data using the DataVisualizer instance."""
-        if self.visualizer:
+    def visualize_data(self, dataset_names=None):
+        """Visualize specific datasets or all if none provided."""
+        if self.config.get('visualize', False) and self.visualizer:
             self.visualizer.generate_class_distribution()
-            if len(self.datasets) > 1:
-                self.visualizer.generate_dataset_comparison([dataset.train.append([dataset.val, dataset.test])
-                                                             for dataset in self.datasets])
 
-    def parse_dicom_image(self, img_path):
+            if dataset_names:
+                datasets_to_compare = [dataset for dataset in self.datasets if dataset.name in dataset_names]
+            else:
+                datasets_to_compare = self.datasets
+
+            if len(datasets_to_compare) > 1:
+                self.visualizer.generate_dataset_comparison(
+                    [dataset.train.append([dataset.val, dataset.test])
+                     for dataset in datasets_to_compare]
+                )
+
+    @staticmethod
+    def parse_dicom_image(img_path):
         """Parses a DICOM image and returns it as a tensor."""
         return parse_dcm_image(img_path)
 

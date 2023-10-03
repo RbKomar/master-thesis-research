@@ -1,62 +1,91 @@
-
 import logging
-from typing import List, Type, Union
+import pickle
 
 from src.master_thesis.config.config import ConfigManager
-from src.master_thesis.models.evaluation.evaluator import ModelEvaluator
-from src.master_thesis.models.train_model import ModelHandler
-from src.master_thesis.models.visualization.visualizer import ModelVisualizer  # Importing ModelVisualizer
-
-logger = logging.getLogger("PipelineController")
+from src.master_thesis.models.model_factory import ModelFactory
+from src.master_thesis.pipelines.data_pipeline.data_pipeline import DataPipeline
+from src.master_thesis.pipelines.model_pipeline.model_pipeline import ModelPipeline
 
 
-class PipelineController:
-    def __init__(self,
-                 config_manager: ConfigManager,
-                 model_evaluator: ModelEvaluator,
-                 model_visualizer: ModelVisualizer):  # Specifying type of model_visualizer
-        self.config_manager = config_manager
-        self.model_evaluator = model_evaluator
-        self.model_visualizer = model_visualizer
-        self.models_with_imagenet = []
-        self.models_without_imagenet = []
-        self.results = {}
+class IntegratedPipeline:
+    def __init__(self, base_config=None):
+        self.logger = logging.getLogger("IntegratedPipeline")
 
-    def add_models(self, model_trainer: Union[ModelHandler, List[Type[ModelHandler]]]):
+        if not base_config:
+            base_config = {
+                'environment': 'development',
+                'data_config': {},
+                'model_config': {}
+            }
+        self.config_manager = ConfigManager(**base_config)
+
+        self.data_pipeline = DataPipeline(self.config_manager.data_config)
+
+        model_factory = ModelFactory()
+        self.model_pipeline = ModelPipeline(self.config_manager.model_config, model_factory)
+
+    def load_process_and_visualize_data(self, loader=None, dataset_names=None):
+        """Load, process, and visualize data."""
         try:
-            if isinstance(model_trainer, list):
-                for model in model_trainer:
-                    self.create_models(model)
-            else:
-                self.create_models(model_trainer)
+            self.data_pipeline.load_and_process_data(loader=loader)
+            self.data_pipeline.visualize_data(dataset_names=dataset_names)
+            self.logger.info("Data loading, processing, and visualization completed.")
         except Exception as e:
-            logger.error(f"Error occurred while adding models: {str(e)}", exc_info=True)
+            self.logger.error(f"Error in data processing: {str(e)}", exc_info=True)
 
-    def create_models(self, model_trainer: ModelHandler):
+    def create_train_and_evaluate_models(self, train_dataset, test_dataset=None):
+        """Create, train, and evaluate models."""
         try:
-            model_trainer_with_imagenet = model_trainer(use_imagenet=True,
-                                                        epochs=self.config_manager.epochs,
-                                                        input_shape=self.config_manager.input_shape)
-            model_trainer_without_imagenet = model_trainer(use_imagenet=False,
-                                                           epochs=self.config_manager.epochs,
-                                                           input_shape=self.config_manager.input_shape)
-            self.models_with_imagenet.append(model_trainer_with_imagenet)
-            self.models_without_imagenet.append(model_trainer_without_imagenet)
+            self.model_pipeline.create_models()
+            self.model_pipeline.process_models(train_dataset, test_dataset)
+            self.logger.info("Models created, trained, and evaluated.")
         except Exception as e:
-            logger.error(f"Error occurred while creating models: {str(e)}", exc_info=True)
+            self.logger.error(f"Error in model processing: {str(e)}", exc_info=True)
 
-    def run_pipeline(self, use_imagenet=True):
+    def save_results(self, file_path):
+        """Save results to a specified file."""
         try:
-            models = self.models_with_imagenet if use_imagenet else self.models_without_imagenet
-
-            for model_trainer in models:
-                model_trainer.initialize_model()
-                model_trainer.train_model()
-                evaluation_results = self.model_evaluator.evaluate_model(model_trainer.model)
-                self.results[model_trainer.__class__.__name__] = evaluation_results
-                self.model_visualizer.plot_training_history(model_trainer.__class__.__name__, model_trainer.history)
-
-            comparison_results = self.model_evaluator.compare_models(self.results)
-            self.model_visualizer.plot_model_comparison(comparison_results)
+            self.model_pipeline.save_results_to_file(file_path)
+            self.logger.info(f"Results saved to {file_path}.")
         except Exception as e:
-            logger.error(f"Error occurred while running the pipeline: {str(e)}", exc_info=True)
+            self.logger.error(f"Error saving results: {str(e)}", exc_info=True)
+
+    def update_config(self, new_config: dict):
+        """Allows updating configurations even after initializing."""
+        if 'data_config' in new_config:
+            self.config_manager.data_config.update(new_config['data_config'])
+        if 'model_config' in new_config:
+            self.config_manager.model_config.update(new_config['model_config'])
+        self.logger.info("Configuration updated.")
+
+    def run_pipeline(self, loader=None, dataset_names=None, train_dataset=None, test_dataset=None,
+                     results_file_path=None):
+        """Runs the entire pipeline from loading data to saving results."""
+        self.logger.info("Pipeline started.")
+
+        self.load_process_and_visualize_data(loader=loader, dataset_names=dataset_names)
+        self.create_train_and_evaluate_models(train_dataset, test_dataset)
+
+        if results_file_path:
+            self.save_results(results_file_path)
+
+        self.logger.info("Pipeline completed.")
+
+    def save_pipeline_state(self, file_path: str):
+        """Saves the state of the pipeline."""
+        try:
+            with open(file_path, 'wb') as f:
+                pickle.dump(self, f)
+            self.logger.info(f"Pipeline state saved to {file_path}.")
+        except Exception as e:
+            self.logger.error(f"Error saving pipeline state: {str(e)}", exc_info=True)
+
+    @staticmethod
+    def load_pipeline_state(file_path: str):
+        """Load a saved pipeline state."""
+        try:
+            with open(file_path, 'rb') as f:
+                return pickle.load(f)
+        except Exception as e:
+            logging.getLogger("IntegratedPipeline").error(f"Error loading pipeline state: {str(e)}", exc_info=True)
+            return None

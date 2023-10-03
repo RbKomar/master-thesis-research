@@ -19,7 +19,7 @@ class VGGModelHandler(ModelHandler):
         x = Dense(512, activation='relu')(x)
         return x
 
-    def initialize_model(self):
+    def _initialize_model(self):
         weights = 'imagenet' if self.use_imagenet else None
         base_model = VGG16(weights=weights, include_top=False, input_shape=self.input_shape)
 
