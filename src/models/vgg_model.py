@@ -13,10 +13,7 @@ class VGGModelTrainer(ModelTrainer):
         self.model=None
 
     def initialize_model(self):
-        if self.use_imagenet:
-            weights = 'imagenet'
-        else:
-            weights = None
+        weights = 'imagenet' if self.use_imagenet else None
         base_model = VGG16(weights=weights, include_top=False, input_shape=self.input_shape)
 
         # Add custom layers

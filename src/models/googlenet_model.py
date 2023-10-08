@@ -17,30 +17,28 @@ from keras.layers import Input, Conv2D, MaxPooling2D, AveragePooling2D, Flatten,
 
 #from https://medium.com/mlearning-ai/implementation-of-googlenet-on-keras-d9873aeed83c
 def Inception_block(input_layer, f1, f2_conv1, f2_conv3, f3_conv1, f3_conv5, f4):
-  # Input:
-  # - f1: number of filters of the 1x1 convolutional layer in the first path
-  # - f2_conv1, f2_conv3 are number of filters corresponding to the 1x1 and 3x3 convolutional layers in the second path
-  # - f3_conv1, f3_conv5 are the number of filters corresponding to the 1x1 and 5x5  convolutional layer in the third path
-  # - f4: number of filters of the 1x1 convolutional layer in the fourth path
+    # Input:
+    # - f1: number of filters of the 1x1 convolutional layer in the first path
+    # - f2_conv1, f2_conv3 are number of filters corresponding to the 1x1 and 3x3 convolutional layers in the second path
+    # - f3_conv1, f3_conv5 are the number of filters corresponding to the 1x1 and 5x5  convolutional layer in the third path
+    # - f4: number of filters of the 1x1 convolutional layer in the fourth path
 
-  # 1st path:
-  path1 = Conv2D(filters=f1, kernel_size = (1,1), padding = 'same', activation = 'relu')(input_layer)
+    # 1st path:
+    path1 = Conv2D(filters=f1, kernel_size = (1,1), padding = 'same', activation = 'relu')(input_layer)
 
-  # 2nd path
-  path2 = Conv2D(filters = f2_conv1, kernel_size = (1,1), padding = 'same', activation = 'relu')(input_layer)
-  path2 = Conv2D(filters = f2_conv3, kernel_size = (3,3), padding = 'same', activation = 'relu')(path2)
+    # 2nd path
+    path2 = Conv2D(filters = f2_conv1, kernel_size = (1,1), padding = 'same', activation = 'relu')(input_layer)
+    path2 = Conv2D(filters = f2_conv3, kernel_size = (3,3), padding = 'same', activation = 'relu')(path2)
 
-  # 3rd path
-  path3 = Conv2D(filters = f3_conv1, kernel_size = (1,1), padding = 'same', activation = 'relu')(input_layer)
-  path3 = Conv2D(filters = f3_conv5, kernel_size = (5,5), padding = 'same', activation = 'relu')(path3)
+    # 3rd path
+    path3 = Conv2D(filters = f3_conv1, kernel_size = (1,1), padding = 'same', activation = 'relu')(input_layer)
+    path3 = Conv2D(filters = f3_conv5, kernel_size = (5,5), padding = 'same', activation = 'relu')(path3)
 
-  # 4th path
-  path4 = MaxPooling2D((3,3), strides= (1,1), padding = 'same')(input_layer)
-  path4 = Conv2D(filters = f4, kernel_size = (1,1), padding = 'same', activation = 'relu')(path4)
+    # 4th path
+    path4 = MaxPooling2D((3,3), strides= (1,1), padding = 'same')(input_layer)
+    path4 = Conv2D(filters = f4, kernel_size = (1,1), padding = 'same', activation = 'relu')(path4)
 
-  output_layer = concatenate([path1, path2, path3, path4], axis = -1)
-
-  return output_layer
+    return concatenate([path1, path2, path3, path4], axis = -1)
 
 
 def GoogLeNet(input_shape, num_classes):
@@ -121,7 +119,4 @@ def GoogLeNet(input_shape, num_classes):
     # output layer
     X = Dense(num_classes, activation='softmax')(X)
 
-    # model
-    model = Model(input_layer, X, name='GoogLeNet')
-
-    return model
+    return Model(input_layer, X, name='GoogLeNet')

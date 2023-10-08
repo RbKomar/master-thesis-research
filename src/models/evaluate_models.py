@@ -10,8 +10,7 @@ def evaluate_model(model, test_data, test_labels):
     predictions = model.predict(test_data)
     pred_labels = np.argmax(predictions, axis=1)
 
-    metrics = {}
-    metrics['accuracy'] = accuracy_score(test_labels, pred_labels)
+    metrics = {'accuracy': accuracy_score(test_labels, pred_labels)}
     metrics['precision'] = precision_score(test_labels, pred_labels, average='weighted')
     metrics['recall'] = recall_score(test_labels, pred_labels, average='weighted')
     metrics['f1_score'] = f1_score(test_labels, pred_labels, average='weighted')
@@ -48,11 +47,13 @@ def evaluate_models():
             metrics[model_name][dataset_name] = model_metrics
 
     for metric in ['accuracy', 'precision', 'recall', 'f1_score']:
-        data = {}
-
-        for model_name in model_names:
-            data[model_name] = [metrics[model_name][dataset_name][metric] for dataset_name in dataset_names]
-
+        data = {
+            model_name: [
+                metrics[model_name][dataset_name][metric]
+                for dataset_name in dataset_names
+            ]
+            for model_name in model_names
+        }
         # Plot comparison chart
         df = pd.DataFrame(data, index=dataset_names)
         df.plot(kind='bar', title=f'Comparison of {metric}')

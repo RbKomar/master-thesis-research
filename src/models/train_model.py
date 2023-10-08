@@ -47,10 +47,7 @@ class ModelTrainer:
         self.input_shape = input_shape
         self.scheduler = scheduler
         self.save_model = save_model
-        if class_weight is None:
-            self.class_weight = {0: 1, 1: 1}
-        else:
-            self.class_weight = class_weight
+        self.class_weight = {0: 1, 1: 1} if class_weight is None else class_weight
         if metrics is None:
             self.metrics = [BinaryAccuracy(), Precision(), Recall(), AUC(), F1Score(), MeanIoU(num_classes=2)]
         else:
@@ -119,15 +116,13 @@ class ModelTrainer:
 
         history = {key: value.numpy().tolist() if isinstance(value, tf.Tensor) else value for key, value in
                    self.history.history.items()}
-        results = {
+        return {
             'train_time': self.training_time,
             'eval_time': self.inference_time,
             'n_params': self.n_params,
             'evaluation_metrics': evaluation_metrics,
-            'history': history
+            'history': history,
         }
-
-        return results
 
     def predict(self, x):
         return self.model.predict(x)
