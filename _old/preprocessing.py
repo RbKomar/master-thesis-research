@@ -2,23 +2,19 @@ import tensorflow as tf
 
 def resize_image(image, size):
     """Resize an image to the given size."""
-    resized_image = tf.image.resize(image, size)
-    return resized_image
+    return tf.image.resize(image, size)
 
 def random_crop(image, size):
     """Randomly crop an image to the given size."""
-    cropped_image = tf.image.random_crop(image, size)
-    return cropped_image
+    return tf.image.random_crop(image, size)
 
 def random_flip_left_right(image):
     """Randomly flip an image horizontally (left to right)."""
-    flipped_image = tf.image.random_flip_left_right(image)
-    return flipped_image
+    return tf.image.random_flip_left_right(image)
 
 def random_brightness(image, max_delta):
     """Randomly adjust the brightness of an image."""
-    brightness_adjusted_image = tf.image.random_brightness(image, max_delta=max_delta)
-    return brightness_adjusted_image
+    return tf.image.random_brightness(image, max_delta=max_delta)
 
 @tf.function
 def preprocess_image(image):

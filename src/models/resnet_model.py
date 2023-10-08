@@ -13,10 +13,7 @@ class ResNet152ModelTrainer(ModelTrainer):
         self.model = None
         self.layers_to_train = layers_to_train
     def initialize_model(self):
-        if self.use_imagenet:
-            weights = 'imagenet'
-        else:
-            weights = None
+        weights = 'imagenet' if self.use_imagenet else None
         base_model = ResNet152(weights=weights, include_top=False, input_shape=self.input_shape)
 
         for layer in base_model.layers[:-self.layers_to_train]:
